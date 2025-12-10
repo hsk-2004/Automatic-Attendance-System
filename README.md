@@ -51,26 +51,27 @@ Deployment Tool: PyInstaller
 
 ⚙️ How It Works
 
-Register Student
+Register Student-
 
 Enter enrollment number and name
 
 Capture face images using webcam
 
-Train Model
+Train Model-
 
 Images are processed and trained using LBPH
 
-Take Attendance
+Take Attendance-
 
 System detects and recognizes faces in real time
 
 Attendance is marked automatically
 
-View Attendance
+View Attendance-
 
 Attendance records can be viewed subject-wise
 
-Delete Student
+Delete Student-
 
 Removes student details and associated images
+
