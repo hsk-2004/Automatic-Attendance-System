@@ -18,13 +18,11 @@ def subjectChoose(text_to_speech):
             recognizer.read(trainimagelabel_path)
             faceCascade = cv2.CascadeClassifier(haarcasecade_path)
             
-            # Load all students
             df_students = pd.read_csv(studentdetail_path)
-            df_students["Present"] = 0  # 0 = absent initially
+            df_students["Present"] = 0
 
             cam = cv2.VideoCapture(0)
             font = cv2.FONT_HERSHEY_SIMPLEX
-            detected_ids = set()
             start_time = time.time()
             duration = 20  # seconds
 
@@ -35,15 +33,34 @@ def subjectChoose(text_to_speech):
 
                 for (x, y, w, h) in faces:
                     Id, conf = recognizer.predict(gray[y:y+h, x:x+w])
+
                     if conf < 70:
-                        name = df_students.loc[df_students["Enrollment"]==Id,"Name"].values[0]
-                        df_students.loc[df_students["Enrollment"]==Id,"Present"] = 1
-                        detected_ids.add(Id)
+                        predicted_name = df_students.loc[df_students["Enrollment"] == Id, "Name"].values[0]
+                        df_students.loc[df_students["Enrollment"] == Id, "Present"] = 1
                         cv2.rectangle(im, (x,y), (x+w,y+h), (0,255,0), 4)
-                        cv2.putText(im, f"{Id}-{name}", (x,y), font, 1, (255,255,0), 2)
+                        cv2.putText(im, f"{Id}-{predicted_name}", (x,y), font, 1, (255,255,0), 2)
                     else:
+                        predicted_name = "Unknown"
                         cv2.rectangle(im, (x,y), (x+w,y+h), (0,0,255), 4)
                         cv2.putText(im, "Unknown", (x,y), font,1,(0,0,255),2)
+
+                    # ------------------------------------------------------------------
+                    #  SAVE PREDICTION FOR CALCULATING ACCURACY / PRECISION / F1 SCORE
+                    # ------------------------------------------------------------------
+                    pred_file = "TrainingImageLabel/predictions.csv"
+
+                    if Id in df_students["Enrollment"].values:
+                        actual_name = df_students.loc[df_students["Enrollment"] == Id, "Name"].values[0]
+                    else:
+                        actual_name = "Unknown"
+
+                    row = pd.DataFrame([[actual_name, predicted_name]], columns=["Actual", "Predicted"])
+
+                    if os.path.exists(pred_file):
+                        row.to_csv(pred_file, mode="a", header=False, index=False)
+                    else:
+                        row.to_csv(pred_file, mode="w", header=True, index=False)
+                    # ------------------------------------------------------------------
 
                 cv2.imshow("Taking Attendance...", im)
                 if cv2.waitKey(30) & 0xFF == 27 or (time.time() - start_time) > duration:
@@ -52,7 +69,7 @@ def subjectChoose(text_to_speech):
             cam.release()
             cv2.destroyAllWindows()
 
-            # Save attendance CSV
+            # Save attendance
             date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             path = os.path.join(attendance_path, sub)
             if not os.path.exists(path):
@@ -63,7 +80,7 @@ def subjectChoose(text_to_speech):
 
             text_to_speech(f"Attendance Filled Successfully for {sub}")
 
-            # Show attendance table
+            # Show table
             root = tk.Tk()
             root.title(f"Attendance of {sub}")
             root.geometry("600x400")
@@ -72,8 +89,8 @@ def subjectChoose(text_to_speech):
 
             with open(fileName) as file:
                 reader = csv.reader(file)
-                for r,row in enumerate(reader):
-                    for c,val in enumerate(row):
+                for r, row in enumerate(reader):
+                    for c, val in enumerate(row):
                         tk.Label(root, text=val, bg="#ffffff", fg="#343a40",
                                  font=("Arial",12), relief=RIDGE, width=12, height=1).grid(row=r,column=c,padx=1,pady=1)
             root.mainloop()
@@ -82,7 +99,6 @@ def subjectChoose(text_to_speech):
             text_to_speech("Error: "+str(e))
             cv2.destroyAllWindows()
 
-    # Subject input window
     subject_window = tk.Tk()
     subject_window.title("Enter Subject")
     subject_window.geometry("580x320")
